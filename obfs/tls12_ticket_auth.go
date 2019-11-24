@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sun8911879/shadowsocksR/ssr"
-	"github.com/sun8911879/shadowsocksR/tools"
+	"github.com/10bits/shadowsocksR/ssr"
+	"github.com/10bits/shadowsocksR/tools"
 )
 
 func init() {
