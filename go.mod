@@ -11,4 +11,3 @@ require (
 	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c
 )
 
-replace github.com/10bits/shadowsocksR => D:\golang\gohome\src\shadowsocksR\
