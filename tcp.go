@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"shadowsocksr/obfs"
+	"shadowsocksr/protocol"
 	"sync"
 
-	"github.com/10bits/shadowsocksR/obfs"
-	"github.com/10bits/shadowsocksR/protocol"
-	"github.com/10bits/shadowsocksR/tools/leakybuf"
+	"shadowsocksr/tools/leakybuf"
 )
 
 // SSTCPConn the struct that override the net.Conn methods

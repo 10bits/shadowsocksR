@@ -1,4 +1,4 @@
-module github.com/10bits/shadowsocksR
+module shadowsocksr
 
 go 1.13
 

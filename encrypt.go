@@ -9,9 +9,8 @@ import (
 	"crypto/rc4"
 	"encoding/binary"
 	"errors"
-
-	"github.com/10bits/shadowsocksR/tools"
-	"github.com/10bits/shadowsocksR/tools/leakybuf"
+	"shadowsocksr/tools"
+	"shadowsocksr/tools/leakybuf"
 
 	//"github.com/Yawning/chacha20"
 	"github.com/dgryski/go-camellia"
