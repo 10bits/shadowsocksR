@@ -9,10 +9,15 @@ import (
 	"shadowsocksr/obfs"
 	"shadowsocksr/protocol"
 	"shadowsocksr/ssr"
+	"shadowsocksr/tools/leakybuf"
 	"shadowsocksr/tools/socks"
 	"strconv"
 	"strings"
 	"time"
+)
+
+var (
+	readTimeout = 600 * time.Second
 )
 
 type SSInfo struct {
@@ -29,11 +34,13 @@ type SSRInfo struct {
 	ProtocolParam string
 	ProtocolData  interface{}
 }
-
-type SSRServer struct {
+type BackendInfo struct {
 	SSInfo
 	Address string
 	Type    string
+}
+type SSRServer struct {
+	*BackendInfo
 	Remarks string
 	Group   string
 }
@@ -87,27 +94,23 @@ func NewSSRServer(ssr_url string, encode bool) *SSRServer {
 		}
 	}
 	return &SSRServer{
-		Address: host + ":" + port,
-		Type:    "ssr",
+		BackendInfo: &BackendInfo{
+			SSInfo: SSInfo{
+				EncryptMethod:   encrypt,
+				EncryptPassword: password,
+				SSRInfo: SSRInfo{
+					Protocol:      protocol,
+					ProtocolParam: protocolparam,
+					Obfs:          obfs,
+					ObfsParam:     obfsparam,
+				},
+			},
+			Address: host + ":" + port,
+			Type:    "ssr",
+		},
 		Remarks: remarks,
 		Group:   group,
-		SSInfo: SSInfo{
-			EncryptMethod:   encrypt,
-			EncryptPassword: password,
-			SSRInfo: SSRInfo{
-				Protocol:      protocol,
-				ProtocolParam: protocolparam,
-				Obfs:          obfs,
-				ObfsParam:     obfsparam,
-			},
-		},
 	}
-}
-
-type BackendInfo struct {
-	SSInfo
-	Address string
-	Type    string
 }
 
 func (bi *BackendInfo) DialSSRConn(rawaddr socks.Addr) (net.Conn, error) {
@@ -144,6 +147,32 @@ func (bi *BackendInfo) DialSSRConn(rawaddr socks.Addr) (net.Conn, error) {
 		return nil, err
 	}
 	return ssrconn, nil
+}
+
+// PipeThenClose copies data from src to dst, closes dst when done.
+func (bi *BackendInfo) Pipe(src, dst net.Conn) error {
+	buf := leakybuf.GlobalLeakyBuf.Get()
+	for {
+		src.SetReadDeadline(time.Now().Add(readTimeout))
+		n, err := src.Read(buf)
+		// read may return EOF with n > 0
+		// should always process n > 0 bytes before handling error
+		if n > 0 {
+			// Note: avoid overwrite err returned by Read.
+			if _, err := dst.Write(buf[0:n]); err != nil {
+				break
+			}
+		}
+		if err != nil {
+			// Always "use of closed network connection", but no easy way to
+			// identify this specific error. So just leave the error along for now.
+			// More info here: https://code.google.com/p/go/issues/detail?id=4373
+			break
+		}
+	}
+	leakybuf.GlobalLeakyBuf.Put(buf)
+	dst.Close()
+	return nil
 }
 
 func NewSSRClient(u *url.URL) (*SSTCPConn, error) {
